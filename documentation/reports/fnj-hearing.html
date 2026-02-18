@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ヒアリングシート — FNJ コーポレートサイト リニューアル</title>
+
+<!-- Firebase SDK (compat v10) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<style>
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-size: 16px; }
+body {
+  font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Meiryo', 'Yu Gothic', sans-serif;
+  color: #1a202c;
+  background: #f0f4f8;
+  min-height: 100vh;
+  line-height: 1.7;
+}
+a { color: #1d4ed8; }
+input, textarea, select, button { font-family: inherit; }
+
+/* ============================================================
+   CONFIG WARNING BANNER
+   ============================================================ */
+#config-warning {
+  background: #fef3c7;
+  border-bottom: 3px solid #f59e0b;
+  padding: 0.75rem 1.5rem;
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #78350f;
+  display: none;
+}
+#config-warning a { color: #92400e; text-decoration: underline; }
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.page-header {
+  background: linear-gradient(135deg, #0c1e4a 0%, #0f2d6e 60%, #1a4fa0 100%);
+  padding: 1.75rem 5%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.header-brand { display: flex; align-items: center; gap: 0.9rem; }
+.header-logo {
+  width: 44px; height: 44px;
+  background: rgba(255,255,255,0.12);
+  border: 1.5px solid rgba(255,255,255,0.2);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  flex-shrink: 0;
+}
+.header-text .header-sub { font-size: 0.72rem; color: rgba(255,255,255,0.55); letter-spacing: 0.06em; }
+.header-text .header-main { font-size: 1.05rem; font-weight: 800; color: #fff; letter-spacing: 0.01em; }
+.header-badge {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.8);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.35rem 0.85rem;
+  border-radius: 50px;
+  letter-spacing: 0.04em;
+}
+
+/* ============================================================
+   PROGRESS BAR (client view)
+   ============================================================ */
+.progress-wrap {
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0.9rem 5%;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.progress-bar-track {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1d4ed8, #0ea5e9);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+  width: 0%;
+}
+.progress-text {
+  font-size: 0.78rem;
+  color: #64748b;
+  display: flex;
+  justify-content: space-between;
+}
+.progress-text span { font-weight: 700; color: #1d4ed8; }
+
+/* ============================================================
+   MAIN CONTENT WRAPPER
+   ============================================================ */
+.content-wrap { max-width: 780px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+
+/* ============================================================
+   INTRO CARD
+   ============================================================ */
+.intro-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 1.75rem 2rem;
+  margin-bottom: 1.75rem;
+  border-left: 5px solid #1d4ed8;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.intro-card h2 { font-size: 1rem; font-weight: 800; color: #0f2557; margin-bottom: 0.5rem; }
+.intro-card p { font-size: 0.87rem; color: #4a5568; line-height: 1.75; }
+.intro-card .intro-meta {
+  margin-top: 1rem;
+  display: flex; flex-wrap: wrap; gap: 0.75rem;
+}
+.intro-chip {
+  font-size: 0.78rem;
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+  padding: 0.25rem 0.75rem;
+  border-radius: 50px;
+  font-weight: 600;
+}
+
+/* ============================================================
+   FORM SECTIONS
+   ============================================================ */
+.form-section {
+  background: #fff;
+  border-radius: 14px;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  overflow: hidden;
+}
+.form-section-header {
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+.section-num-badge {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+}
+.form-section-title { font-size: 0.97rem; font-weight: 800; color: #fff; }
+.form-section-body { padding: 1.5rem; }
+
+/* Section color themes */
+.sec-1 .form-section-header { background: linear-gradient(135deg, #0f2557, #1e3a8a); }
+.sec-1 .section-num-badge { background: rgba(255,255,255,0.2); }
+.sec-2 .form-section-header { background: linear-gradient(135deg, #1e3a8a, #2563eb); }
+.sec-2 .section-num-badge { background: rgba(255,255,255,0.2); }
+.sec-3 .form-section-header { background: linear-gradient(135deg, #1d4ed8, #0ea5e9); }
+.sec-3 .section-num-badge { background: rgba(255,255,255,0.2); }
+.sec-4 .form-section-header { background: linear-gradient(135deg, #065f46, #059669); }
+.sec-4 .section-num-badge { background: rgba(255,255,255,0.2); }
+.sec-5 .form-section-header { background: linear-gradient(135deg, #4c1d95, #7c3aed); }
+.sec-5 .section-num-badge { background: rgba(255,255,255,0.2); }
+.sec-6 .form-section-header { background: linear-gradient(135deg, #92400e, #d97706); }
+.sec-6 .section-num-badge { background: rgba(255,255,255,0.2); }
+.sec-7 .form-section-header { background: linear-gradient(135deg, #9f1239, #e11d48); }
+.sec-7 .section-num-badge { background: rgba(255,255,255,0.2); }
+.sec-8 .form-section-header { background: linear-gradient(135deg, #1e293b, #334155); }
+.sec-8 .section-num-badge { background: rgba(255,255,255,0.2); }
+.sec-9 .form-section-header { background: linear-gradient(135deg, #0c4a6e, #0284c7); }
+.sec-9 .section-num-badge { background: rgba(255,255,255,0.2); }
+
+/* ============================================================
+   FORM ELEMENTS
+   ============================================================ */
+.form-group { margin-bottom: 1.25rem; }
+.form-group:last-child { margin-bottom: 0; }
+.form-label {
+  display: block;
+  font-size: 0.87rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 0.45rem;
+}
+.form-label .req {
+  color: #dc2626;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-left: 0.3rem;
+  vertical-align: middle;
+}
+.form-label .opt {
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-left: 0.3rem;
+}
+.form-hint { font-size: 0.78rem; color: #64748b; margin-top: 0.25rem; }
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #1a202c;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: #1d4ed8;
+  box-shadow: 0 0 0 3px rgba(29,78,216,0.1);
+}
+.form-textarea { min-height: 100px; resize: vertical; line-height: 1.65; }
+.form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+/* Checkbox & Radio */
+.check-group, .radio-group { display: flex; flex-direction: column; gap: 0.55rem; }
+.check-group.inline, .radio-group.inline { flex-direction: row; flex-wrap: wrap; gap: 0.5rem 1.25rem; }
+.check-item, .radio-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: #374151;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  transition: all 0.15s;
+}
+.check-item:hover, .radio-item:hover { border-color: #1d4ed8; background: #eff6ff; }
+.check-item input, .radio-item input { width: 16px; height: 16px; accent-color: #1d4ed8; margin-top: 2px; flex-shrink: 0; cursor: pointer; }
+.check-item label, .radio-item label { cursor: pointer; line-height: 1.45; }
+.check-item.checked, .radio-item.checked { border-color: #1d4ed8; background: #eff6ff; }
+
+/* Feature Priority Matrix */
+.feat-matrix { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.feat-matrix th, .feat-matrix td {
+  border: 1px solid #e2e8f0;
+  padding: 0.6rem 0.75rem;
+  text-align: center;
+}
+.feat-matrix thead th {
+  background: #0f2557;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+.feat-matrix thead th:first-child { text-align: left; }
+.feat-matrix tbody tr:nth-child(even) td { background: #f8fafc; }
+.feat-matrix tbody td:first-child { text-align: left; font-weight: 600; color: #1e293b; padding-left: 0.85rem; }
+.feat-matrix input[type="radio"] { width: 18px; height: 18px; accent-color: #1d4ed8; cursor: pointer; }
+.feat-matrix tr:hover td { background: #eff6ff !important; }
+
+/* ============================================================
+   SUBMIT BUTTON AREA
+   ============================================================ */
+.submit-area { text-align: center; margin-top: 2rem; }
+.submit-btn {
+  background: linear-gradient(135deg, #1d4ed8, #0ea5e9);
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 800;
+  padding: 1rem 3rem;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 20px rgba(29,78,216,0.3);
+  letter-spacing: 0.02em;
+  min-width: 260px;
+}
+.submit-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(29,78,216,0.4); }
+.submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+.submit-note { font-size: 0.8rem; color: #64748b; margin-top: 0.75rem; }
+
+/* ============================================================
+   THANK YOU SCREEN
+   ============================================================ */
+#thank-you {
+  display: none;
+  text-align: center;
+  background: #fff;
+  border-radius: 14px;
+  padding: 4rem 2rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.ty-icon { font-size: 3.5rem; margin-bottom: 1.25rem; }
+.ty-title { font-size: 1.4rem; font-weight: 800; color: #0f2557; margin-bottom: 0.75rem; }
+.ty-desc { font-size: 0.92rem; color: #4a5568; line-height: 1.75; max-width: 480px; margin: 0 auto; }
+
+/* ============================================================
+   ADMIN VIEW
+   ============================================================ */
+.admin-header {
+  background: linear-gradient(135deg, #0c1e4a 0%, #1e293b 100%);
+  padding: 1.5rem 5%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.admin-header-title { font-size: 1.1rem; font-weight: 800; color: #fff; }
+.admin-header-sub { font-size: 0.78rem; color: rgba(255,255,255,0.55); margin-top: 0.1rem; }
+.admin-live-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(16,185,129,0.15);
+  border: 1px solid rgba(16,185,129,0.3);
+  color: #34d399;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.35rem 0.85rem;
+  border-radius: 50px;
+}
+.live-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+.admin-wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+
+/* Admin Stats */
+.admin-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem; }
+.admin-stat-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.admin-stat-icon { font-size: 1.6rem; }
+.admin-stat-label { font-size: 0.78rem; color: #64748b; font-weight: 600; }
+.admin-stat-val { font-size: 1.6rem; font-weight: 800; color: #0f2557; line-height: 1.1; }
+
+/* Submission Cards */
+.submissions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.submissions-title { font-size: 1rem; font-weight: 800; color: #0f2557; }
+.submissions-sort { font-size: 0.82rem; color: #64748b; }
+
+.sub-card {
+  background: #fff;
+  border-radius: 14px;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+}
+.sub-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+.sub-card-header {
+  padding: 1.1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  cursor: pointer;
+  user-select: none;
+}
+.sub-card-header:hover { background: #f8fafc; }
+.sub-card-left { display: flex; align-items: center; gap: 0.85rem; }
+.sub-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1d4ed8, #0ea5e9);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.sub-name { font-size: 0.97rem; font-weight: 700; color: #0f2557; }
+.sub-dept { font-size: 0.8rem; color: #64748b; }
+.sub-card-meta { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
+.sub-time { font-size: 0.78rem; color: #94a3b8; white-space: nowrap; }
+.sub-expand-icon { color: #94a3b8; font-size: 0.85rem; transition: transform 0.2s; }
+.sub-card.expanded .sub-expand-icon { transform: rotate(180deg); }
+
+.sub-card-body {
+  display: none;
+  border-top: 1px solid #f0f4f8;
+  padding: 1.25rem 1.5rem;
+}
+.sub-card.expanded .sub-card-body { display: block; }
+
+.sub-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+.sub-field { margin-bottom: 0.75rem; }
+.sub-field-label { font-size: 0.75rem; font-weight: 700; color: #64748b; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 0.2rem; }
+.sub-field-value { font-size: 0.88rem; color: #1e293b; line-height: 1.55; }
+.sub-field-value.empty { color: #94a3b8; font-style: italic; }
+.sub-section-divider {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #1d4ed8;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.75rem 0 0.5rem;
+  border-top: 1px solid #f0f4f8;
+  margin-top: 0.75rem;
+}
+.sub-section-divider:first-child { padding-top: 0; border-top: none; margin-top: 0; }
+
+.tag-list { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.25rem; }
+.sub-tag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+/* Admin empty state */
+#admin-empty {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #94a3b8;
+  display: none;
+}
+#admin-empty .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+#admin-empty p { font-size: 0.9rem; }
+
+/* Admin loading */
+#admin-loading {
+  text-align: center;
+  padding: 3rem;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 640px) {
+  .form-grid-2 { grid-template-columns: 1fr; }
+  .admin-stats { grid-template-columns: 1fr; }
+  .sub-grid { grid-template-columns: 1fr; }
+  .feat-matrix { font-size: 0.78rem; }
+  .feat-matrix th, .feat-matrix td { padding: 0.4rem 0.4rem; }
+  .check-item, .radio-item { font-size: 0.83rem; }
+  .submit-btn { min-width: unset; width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- Config Warning -->
+<div id="config-warning">
+  ⚠️ Firebase設定が未完了です。HTMLソース内の <code>YOUR_API_KEY</code> 等を実際の値に置き換えてください。
+  <a href="https://console.firebase.google.com/" target="_blank">Firebase Console →</a>
+</div>
+
+<!-- ============================================================
+     CLIENT VIEW
+     ============================================================ -->
+<div id="view-client">
+
+  <!-- Page Header -->
+  <header class="page-header">
+    <div class="header-brand">
+      <div class="header-logo">FNJ</div>
+      <div class="header-text">
+        <div class="header-sub">CORPORATE SITE RENEWAL</div>
+        <div class="header-main">ウェブサイト リニューアル ヒアリングシート</div>
+      </div>
+    </div>
+    <div class="header-badge">📋 要件ヒアリング</div>
+  </header>
+
+  <!-- Progress Bar -->
+  <div class="progress-wrap">
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-text">
+      <span id="progressLabel">入力してください</span>
+      <span id="progressPct">0%</span>
+    </div>
+  </div>
+
+  <div class="content-wrap">
+
+    <!-- Intro -->
+    <div class="intro-card">
+      <h2>ご回答のお願い</h2>
+      <p>
+        このたびはコーポレートサイトリニューアルにご関心をいただきありがとうございます。<br>
+        より精度の高いご提案を行うため、以下の項目についてご回答をお願いいたします。<br>
+        所要時間の目安は約<strong>10〜15分</strong>です。
+      </p>
+      <div class="intro-meta">
+        <span class="intro-chip">📅 提案期限：2026年3月15日</span>
+        <span class="intro-chip">💰 予算：700万円以内</span>
+        <span class="intro-chip">🗓 納品：2027年1月31日</span>
+      </div>
+    </div>
+
+    <form id="hearingForm" novalidate>
+
+      <!-- ────────────────────────────────
+           Section 1: 基本情報
+           ──────────────────────────────── -->
+      <div class="form-section sec-1">
+        <div class="form-section-header">
+          <div class="section-num-badge">1</div>
+          <div class="form-section-title">👤 基本情報</div>
+        </div>
+        <div class="form-section-body">
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="name">お名前<span class="req">必須</span></label>
+              <input class="form-input" type="text" id="name" name="name" placeholder="西 昌哉" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="dept">部署名<span class="opt">任意</span></label>
+              <input class="form-input" type="text" id="dept" name="dept" placeholder="例：マーケティング部">
+            </div>
+          </div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="email">メールアドレス<span class="req">必須</span></label>
+              <input class="form-input" type="email" id="email" name="email" placeholder="nishi@fnj.co.jp" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="phone">電話番号<span class="opt">任意</span></label>
+              <input class="form-input" type="tel" id="phone" name="phone" placeholder="03-xxxx-xxxx">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ────────────────────────────────
+           Section 2: 現行サイトの課題
+           ──────────────────────────────── -->
+      <div class="form-section sec-2">
+        <div class="form-section-header">
+          <div class="section-num-badge">2</div>
+          <div class="form-section-title">🔍 現行サイトの課題</div>
+        </div>
+        <div class="form-section-body">
+          <div class="form-group">
+            <label class="form-label">特に困っていることをお選びください（複数選択可）</label>
+            <div class="check-group" id="problemsGroup">
+              <label class="check-item"><input type="checkbox" name="problems" value="デザインが古い・時代遅れに感じる"><label>デザインが古い・時代遅れに感じる</label></label>
+              <label class="check-item"><input type="checkbox" name="problems" value="スマートフォンでの表示・操作がしにくい"><label>スマートフォンでの表示・操作がしにくい</label></label>
+              <label class="check-item"><input type="checkbox" name="problems" value="欲しい情報にたどり着きにくい（動線が不明確）"><label>欲しい情報にたどり着きにくい（動線が不明確）</label></label>
+              <label class="check-item"><input type="checkbox" name="problems" value="サービス内容・特徴がわかりにくい"><label>サービス内容・特徴がわかりにくい</label></label>
+              <label class="check-item"><input type="checkbox" name="problems" value="問い合わせ・資料請求への誘導が弱い"><label>問い合わせ・資料請求への誘導が弱い</label></label>
+              <label class="check-item"><input type="checkbox" name="problems" value="検索機能がない・使いにくい"><label>検索機能がない・使いにくい</label></label>
+              <label class="check-item"><input type="checkbox" name="problems" value="サイトの更新作業が大変・手間がかかる"><label>サイトの更新作業が大変・手間がかかる</label></label>
+              <label class="check-item"><input type="checkbox" name="problems" value="ページ読み込みが遅い"><label>ページ読み込みが遅い</label></label>
+              <label class="check-item"><input type="checkbox" name="problems" value="SEO（検索順位）が低く集客できていない"><label>SEO（検索順位）が低く集客できていない</label></label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="problemsOther">その他・詳しくお聞かせください<span class="opt">任意</span></label>
+            <textarea class="form-textarea" id="problemsOther" name="problemsOther" placeholder="現行サイトについて感じている課題や改善してほしい点を自由にご記入ください。"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ────────────────────────────────
+           Section 3: ターゲット・ユーザー層
+           ──────────────────────────────── -->
+      <div class="form-section sec-3">
+        <div class="form-section-header">
+          <div class="section-num-badge">3</div>
+          <div class="form-section-title">🎯 ターゲット・ユーザー層</div>
+        </div>
+        <div class="form-section-body">
+          <div class="form-group">
+            <label class="form-label">重視するユーザー層<span class="req">必須</span></label>
+            <div class="radio-group" id="targetPriorityGroup">
+              <label class="radio-item"><input type="radio" name="targetPriority" value="B2B（事業者）を特に重視" required><label>🏢 B2B（事業者）を特に重視 — デベロッパー・管理会社向け</label></label>
+              <label class="radio-item"><input type="radio" name="targetPriority" value="B2C（居住者・個人）を特に重視"><label>🏠 B2C（居住者・個人）を特に重視 — 入居者向け</label></label>
+              <label class="radio-item"><input type="radio" name="targetPriority" value="B2B・B2C どちらも同等に重視"><label>⚖️ B2B・B2C どちらも同等に重視</label></label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">特に重要なB2Bターゲット（複数選択可）</label>
+            <div class="check-group inline" id="b2bTargetsGroup">
+              <label class="check-item"><input type="checkbox" name="b2bTargets" value="マンションデベロッパー"><label>マンションデベロッパー</label></label>
+              <label class="check-item"><input type="checkbox" name="b2bTargets" value="マンション管理会社"><label>マンション管理会社</label></label>
+              <label class="check-item"><input type="checkbox" name="b2bTargets" value="不動産会社"><label>不動産会社</label></label>
+              <label class="check-item"><input type="checkbox" name="b2bTargets" value="ゼネコン・建設会社"><label>ゼネコン・建設会社</label></label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="targetDetail">ターゲットについて補足<span class="opt">任意</span></label>
+            <textarea class="form-textarea" id="targetDetail" name="targetDetail" placeholder="例：エリアや規模感、特定の職種など、よりターゲットを絞っている場合はご記入ください。" style="min-height:80px;"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ────────────────────────────────
+           Section 4: リニューアルの目的・目標
+           ──────────────────────────────── -->
+      <div class="form-section sec-4">
+        <div class="form-section-header">
+          <div class="section-num-badge">4</div>
+          <div class="form-section-title">🚀 リニューアルの目的・目標</div>
+        </div>
+        <div class="form-section-body">
+          <div class="form-group">
+            <label class="form-label">リニューアルで達成したいこと（複数選択可）</label>
+            <div class="check-group" id="goalsGroup">
+              <label class="check-item"><input type="checkbox" name="goals" value="問い合わせ数・リード獲得数を増やす"><label>問い合わせ数・リード獲得数を増やす</label></label>
+              <label class="check-item"><input type="checkbox" name="goals" value="サービス内容の理解を促進する"><label>サービス内容の理解を促進する</label></label>
+              <label class="check-item"><input type="checkbox" name="goals" value="企業ブランドイメージを向上させる"><label>企業ブランドイメージを向上させる</label></label>
+              <label class="check-item"><input type="checkbox" name="goals" value="採用応募数を増やす"><label>採用応募数を増やす</label></label>
+              <label class="check-item"><input type="checkbox" name="goals" value="既存顧客への情報提供を強化する"><label>既存顧客への情報提供を強化する</label></label>
+              <label class="check-item"><input type="checkbox" name="goals" value="SEO・検索流入を向上させる"><label>SEO・検索流入を向上させる</label></label>
+              <label class="check-item"><input type="checkbox" name="goals" value="サイト更新・運用を効率化する"><label>サイト更新・運用を効率化する（CMS導入等）</label></label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="topGoal">最も重要な目標を一つ教えてください<span class="opt">任意</span></label>
+            <textarea class="form-textarea" id="topGoal" name="topGoal" placeholder="例：まず問い合わせ数を現在の2倍にしたい、採用ページを充実させたい、など" style="min-height:80px;"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ────────────────────────────────
+           Section 5: デザイン・ブランドイメージ
+           ──────────────────────────────── -->
+      <div class="form-section sec-5">
+        <div class="form-section-header">
+          <div class="section-num-badge">5</div>
+          <div class="form-section-title">🎨 デザイン・ブランドイメージ</div>
+        </div>
+        <div class="form-section-body">
+          <div class="form-group">
+            <label class="form-label">希望するサイトのイメージ<span class="req">必須</span></label>
+            <div class="radio-group" id="designImageGroup">
+              <label class="radio-item"><input type="radio" name="designImage" value="クリーン・シンプル・洗練された" required><label>✨ クリーン・シンプル・洗練された</label></label>
+              <label class="radio-item"><input type="radio" name="designImage" value="プロフェッショナル・重厚感・信頼感のある"><label>🤝 プロフェッショナル・重厚感・信頼感のある</label></label>
+              <label class="radio-item"><input type="radio" name="designImage" value="革新的・テック感・先進性を感じる"><label>⚡ 革新的・テック感・先進性を感じる</label></label>
+              <label class="radio-item"><input type="radio" name="designImage" value="温かみ・親しみやすい・フレンドリー"><label>🌱 温かみ・親しみやすい・フレンドリー</label></label>
+              <label class="radio-item"><input type="radio" name="designImage" value="その他（自由記入欄に記載）"><label>その他（下の自由記入欄に記載）</label></label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">現行の企業カラー（青系）について</label>
+            <div class="radio-group inline" id="brandColorGroup">
+              <label class="radio-item"><input type="radio" name="brandColor" value="継続したい（青系を維持）"><label>継続したい（青系を維持）</label></label>
+              <label class="radio-item"><input type="radio" name="brandColor" value="少し変えたい（青ベースで調整）"><label>少し変えたい（青ベースで調整）</label></label>
+              <label class="radio-item"><input type="radio" name="brandColor" value="大きく変えたい"><label>大きく変えたい</label></label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="referenceUrls">参考にしたいウェブサイト（URL）<span class="opt">任意</span></label>
+            <textarea class="form-textarea" id="referenceUrls" name="referenceUrls" placeholder="例：https://example.com（このデザインが好き）&#10;https://sample.jp（コンテンツ構成が参考になる）" style="min-height:90px;"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ngDesign">避けたい色・デザイン・トーン<span class="opt">任意</span></label>
+            <textarea class="form-textarea" id="ngDesign" name="ngDesign" placeholder="例：赤系は避けたい、ポップすぎる表現はNG、など" style="min-height:80px;"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ────────────────────────────────
+           Section 6: 必要な機能（優先度マトリックス）
+           ──────────────────────────────── -->
+      <div class="form-section sec-6">
+        <div class="form-section-header">
+          <div class="section-num-badge">6</div>
+          <div class="form-section-title">⚙️ 必要な機能 — 優先度</div>
+        </div>
+        <div class="form-section-body">
+          <p style="font-size:0.85rem;color:#4a5568;margin-bottom:1rem;">各機能の優先度をお選びください。</p>
+          <div style="overflow-x:auto;">
+            <table class="feat-matrix">
+              <thead>
+                <tr>
+                  <th style="width:45%;text-align:left;">機能</th>
+                  <th style="color:#22c55e;">✅ 必須</th>
+                  <th style="color:#f59e0b;">🔶 あれば良い</th>
+                  <th style="color:#94a3b8;">❌ 不要</th>
+                </tr>
+              </thead>
+              <tbody id="featureMatrix">
+                <!-- JS で生成 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ────────────────────────────────
+           Section 7: SEO・集客
+           ──────────────────────────────── -->
+      <div class="form-section sec-7">
+        <div class="form-section-header">
+          <div class="section-num-badge">7</div>
+          <div class="form-section-title">📈 SEO・集客</div>
+        </div>
+        <div class="form-section-body">
+          <div class="form-group">
+            <label class="form-label">現在実施している施策（複数選択可）</label>
+            <div class="check-group inline" id="seoMeasuresGroup">
+              <label class="check-item"><input type="checkbox" name="seoMeasures" value="Googleアナリティクス等の計測ツール導入済み"><label>計測ツール導入済み（GA4等）</label></label>
+              <label class="check-item"><input type="checkbox" name="seoMeasures" value="SEO対策を実施している"><label>SEO対策を実施している</label></label>
+              <label class="check-item"><input type="checkbox" name="seoMeasures" value="リスティング広告を運用している"><label>リスティング広告を運用している</label></label>
+              <label class="check-item"><input type="checkbox" name="seoMeasures" value="SNSを運用している"><label>SNSを運用している</label></label>
+              <label class="check-item"><input type="checkbox" name="seoMeasures" value="特に対策していない"><label>特に対策していない</label></label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="keywords">上位表示を狙いたいキーワード<span class="opt">任意</span></label>
+            <input class="form-input" type="text" id="keywords" name="keywords" placeholder="例：マンション インターネット、IoT マンション、マンション管理 DX">
+            <div class="form-hint">カンマ区切りで複数入力できます</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">リニューアル後の広告運用サポートについて</label>
+            <div class="radio-group inline" id="adsSupportGroup">
+              <label class="radio-item"><input type="radio" name="adsSupport" value="希望する"><label>希望する</label></label>
+              <label class="radio-item"><input type="radio" name="adsSupport" value="検討中"><label>検討中</label></label>
+              <label class="radio-item"><input type="radio" name="adsSupport" value="不要"><label>不要</label></label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ────────────────────────────────
+           Section 8: スケジュール・予算
+           ──────────────────────────────── -->
+      <div class="form-section sec-8">
+        <div class="form-section-header">
+          <div class="section-num-badge">8</div>
+          <div class="form-section-title">📅 スケジュール・予算</div>
+        </div>
+        <div class="form-section-body">
+          <div class="form-group">
+            <label class="form-label">希望する公開時期</label>
+            <div class="radio-group" id="launchTimingGroup">
+              <label class="radio-item"><input type="radio" name="launchTiming" value="2026年上半期（〜2026年6月）"><label>2026年上半期（〜2026年6月）</label></label>
+              <label class="radio-item"><input type="radio" name="launchTiming" value="2026年下半期（2026年7〜12月）"><label>2026年下半期（2026年7〜12月）</label></label>
+              <label class="radio-item"><input type="radio" name="launchTiming" value="2027年1月（提案スケジュール通り）"><label>2027年1月（提案スケジュール通り）✅ 推奨</label></label>
+              <label class="radio-item"><input type="radio" name="launchTiming" value="未定・要相談"><label>未定・要相談</label></label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">ご提案金額（¥6,800,000税抜）についてのご意見</label>
+            <div class="radio-group" id="budgetFeedbackGroup">
+              <label class="radio-item"><input type="radio" name="budgetFeedback" value="提案金額で問題ない"><label>提案金額で問題ない</label></label>
+              <label class="radio-item"><input type="radio" name="budgetFeedback" value="多少削減したい（スコープ調整で対応希望）"><label>多少削減したい（スコープ調整で対応希望）</label></label>
+              <label class="radio-item"><input type="radio" name="budgetFeedback" value="追加予算を検討できる（機能追加希望）"><label>追加予算を検討できる（機能追加希望）</label></label>
+              <label class="radio-item"><input type="radio" name="budgetFeedback" value="再見積りを希望"><label>再見積りを希望</label></label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="budgetNote">予算・スコープに関する補足<span class="opt">任意</span></label>
+            <textarea class="form-textarea" id="budgetNote" name="budgetNote" placeholder="例：パンフレット制作は別途費用にしてほしい、月額保守費を抑えたい、等" style="min-height:80px;"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ────────────────────────────────
+           Section 9: その他・自由記入
+           ──────────────────────────────── -->
+      <div class="form-section sec-9">
+        <div class="form-section-header">
+          <div class="section-num-badge">9</div>
+          <div class="form-section-title">💬 その他・自由記入</div>
+        </div>
+        <div class="form-section-body">
+          <div class="form-group">
+            <label class="form-label" for="concerns">懸念点・質問・ご要望<span class="opt">任意</span></label>
+            <textarea class="form-textarea" id="concerns" name="concerns" placeholder="ご不安な点、確認したいこと、その他なんでもご記入ください。" style="min-height:120px;"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">競合他社のウェブサイトとの差別化で意識したい点<span class="opt">任意</span></label>
+            <textarea class="form-textarea" id="differentiation" name="differentiation" placeholder="例：他社サービスとの違いをもっと打ち出したい、〇〇社よりわかりやすくしたい、など" style="min-height:80px;"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div class="submit-area">
+        <button type="submit" class="submit-btn" id="submitBtn">
+          📤 回答を送信する
+        </button>
+        <p class="submit-note">送信後、担当者より改めてご連絡いたします。</p>
+      </div>
+
+    </form>
+
+    <!-- Thank You Screen -->
+    <div id="thank-you">
+      <div class="ty-icon">🎉</div>
+      <h2 class="ty-title">ご回答ありがとうございました！</h2>
+      <p class="ty-desc">
+        貴重なご意見をいただきありがとうございます。<br>
+        内容を確認の上、担当者より改めてご連絡いたします。<br><br>
+        MTGでの要件整理にしっかり活用させていただきます。
+      </p>
+    </div>
+
+  </div><!-- /content-wrap -->
+</div><!-- /view-client -->
+
+
+<!-- ============================================================
+     ADMIN VIEW
+     ============================================================ -->
+<div id="view-admin" style="display:none;">
+
+  <header class="admin-header">
+    <div>
+      <div class="admin-header-title">📊 ヒアリング回答 管理画面</div>
+      <div class="admin-header-sub">FNJ コーポレートサイト リニューアル — テラ担当者専用</div>
+    </div>
+    <div class="admin-live-badge">
+      <div class="live-dot"></div>
+      LIVE
+    </div>
+  </header>
+
+  <div class="admin-wrap">
+
+    <!-- Stats -->
+    <div class="admin-stats" id="adminStats">
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon">📋</div>
+        <div>
+          <div class="admin-stat-label">総回答数</div>
+          <div class="admin-stat-val" id="statTotal">—</div>
+        </div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon">🕐</div>
+        <div>
+          <div class="admin-stat-label">最新回答</div>
+          <div class="admin-stat-val" id="statLatest" style="font-size:1rem;">—</div>
+        </div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon">🎯</div>
+        <div>
+          <div class="admin-stat-label">最多課題</div>
+          <div class="admin-stat-val" id="statTopIssue" style="font-size:0.85rem;line-height:1.3;">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Submissions List -->
+    <div class="submissions-header">
+      <div class="submissions-title">回答一覧（新着順）</div>
+      <div class="submissions-sort">リアルタイム更新中</div>
+    </div>
+
+    <div id="admin-loading">⏳ Firestoreに接続中...</div>
+    <div id="admin-empty">
+      <div class="empty-icon">📭</div>
+      <p>まだ回答がありません。<br>クライアントがフォームを送信すると、ここにリアルタイムで表示されます。</p>
+    </div>
+    <div id="submissions-list"></div>
+
+  </div>
+</div><!-- /view-admin -->
+
+<!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+<script>
+// ================================================================
+// ⚠️ Firebase設定
+// 1. https://console.firebase.google.com/ でプロジェクトを作成
+// 2. Firestoreを有効化（本番モードまたはテストモード）
+// 3. プロジェクト設定 → ウェブアプリ追加 → 設定値をコピー
+// 4. 下記 YOUR_XXX を実際の値に置き換えて保存・プッシュしてください
+// ================================================================
+const firebaseConfig = {
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId:             "YOUR_APP_ID"
+};
+// ================================================================
+
+// ── Firebase init ──
+const IS_CONFIGURED = !firebaseConfig.apiKey.startsWith("YOUR_");
+let db = null;
+
+if (IS_CONFIGURED) {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+} else {
+  document.getElementById('config-warning').style.display = 'block';
+}
+
+// ── View routing ──
+const params = new URLSearchParams(window.location.search);
+const isAdmin = params.get('view') === 'admin';
+
+if (isAdmin) {
+  document.getElementById('view-admin').style.display = 'block';
+  if (IS_CONFIGURED) {
+    loadSubmissions();
+  } else {
+    document.getElementById('admin-loading').textContent = '⚠️ Firebase設定が未完了です。HTMLを設定後に再アクセスしてください。';
+  }
+} else {
+  document.getElementById('view-client').style.display = 'block';
+  buildFeatureMatrix();
+  initProgress();
+}
+
+// ================================================================
+// FEATURE MATRIX (Section 6)
+// ================================================================
+const FEATURES = [
+  'サービス紹介ページ（PC・スマホ対応）',
+  'お問い合わせフォーム',
+  'サイト内検索機能',
+  'ニュース・お知らせ更新（CMS）',
+  '導入事例ページ',
+  '採用情報ページ',
+  '居住者向けポータルページ',
+  '多言語対応（英語等）',
+  '資料ダウンロード機能',
+  'チャット・問い合わせウィジェット',
+];
+
+function buildFeatureMatrix() {
+  const tbody = document.getElementById('featureMatrix');
+  if (!tbody) return;
+  FEATURES.forEach((feat, i) => {
+    const name = 'feat_' + i;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${feat}</td>
+      <td><input type="radio" name="${name}" value="必須"></td>
+      <td><input type="radio" name="${name}" value="あれば良い"></td>
+      <td><input type="radio" name="${name}" value="不要"></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ================================================================
+// PROGRESS BAR
+// ================================================================
+function initProgress() {
+  const required = document.querySelectorAll('[required]');
+  const allInputs = document.querySelectorAll('input, textarea, select');
+
+  function update() {
+    let filled = 0;
+    allInputs.forEach(el => {
+      if (el.type === 'radio' || el.type === 'checkbox') {
+        const group = document.querySelectorAll(`[name="${el.name}"]:checked`);
+        if (group.length > 0) filled += 0.5; // partial credit
+      } else if (el.value.trim()) {
+        filled += 1;
+      }
+    });
+    const total = allInputs.length;
+    const pct = Math.min(Math.round((filled / total) * 100), 100);
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressPct').textContent = pct + '%';
+    document.getElementById('progressLabel').textContent =
+      pct < 30 ? '入力を開始してください' :
+      pct < 70 ? '順調に進んでいます' :
+      pct < 100 ? 'もう少しです！' : '✅ 入力完了！';
+  }
+
+  allInputs.forEach(el => el.addEventListener('input', update));
+  allInputs.forEach(el => el.addEventListener('change', update));
+
+  // Checkbox/radio visual update
+  document.querySelectorAll('.check-item, .radio-item').forEach(item => {
+    const input = item.querySelector('input');
+    if (input) {
+      input.addEventListener('change', () => {
+        if (input.type === 'radio') {
+          document.querySelectorAll(`input[name="${input.name}"]`).forEach(r => {
+            r.closest('.radio-item')?.classList.remove('checked');
+          });
+        }
+        item.classList.toggle('checked', input.checked);
+      });
+    }
+  });
+}
+
+// ================================================================
+// FORM SUBMISSION
+// ================================================================
+document.getElementById('hearingForm')?.addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  // Validate required fields
+  const name = document.getElementById('name').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const targetPriority = document.querySelector('input[name="targetPriority"]:checked')?.value;
+  const designImage = document.querySelector('input[name="designImage"]:checked')?.value;
+
+  if (!name || !email) {
+    alert('お名前とメールアドレスは必須項目です。');
+    return;
+  }
+  if (!targetPriority) {
+    alert('Section 3「重視するユーザー層」を選択してください。');
+    return;
+  }
+  if (!designImage) {
+    alert('Section 5「希望するサイトのイメージ」を選択してください。');
+    return;
+  }
+
+  if (!IS_CONFIGURED) {
+    alert('Firebase設定が未完了のため送信できません。HTMLの設定を確認してください。');
+    return;
+  }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ 送信中...';
+
+  // Collect form data
+  const getChecked = (name) => {
+    return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(el => el.value);
+  };
+  const getRadio = (name) => document.querySelector(`input[name="${name}"]:checked`)?.value || '';
+  const getVal = (id) => document.getElementById(id)?.value.trim() || '';
+
+  // Feature matrix
+  const features = {};
+  FEATURES.forEach((feat, i) => {
+    features[feat] = getRadio('feat_' + i) || '未回答';
+  });
+
+  const data = {
+    submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    basicInfo: {
+      name:  getVal('name'),
+      dept:  getVal('dept'),
+      email: getVal('email'),
+      phone: getVal('phone'),
+    },
+    currentIssues: {
+      problems:    getChecked('problems'),
+      otherDetail: getVal('problemsOther'),
+    },
+    target: {
+      priority:    getRadio('targetPriority'),
+      b2bTargets:  getChecked('b2bTargets'),
+      detail:      getVal('targetDetail'),
+    },
+    goals: {
+      goals:    getChecked('goals'),
+      topGoal:  getVal('topGoal'),
+    },
+    design: {
+      imageKeyword:  getRadio('designImage'),
+      brandColor:    getRadio('brandColor'),
+      references:    getVal('referenceUrls'),
+      ngDesign:      getVal('ngDesign'),
+    },
+    features: features,
+    seo: {
+      measures:   getChecked('seoMeasures'),
+      keywords:   getVal('keywords'),
+      adsSupport: getRadio('adsSupport'),
+    },
+    schedule: {
+      launchTiming:    getRadio('launchTiming'),
+      budgetFeedback:  getRadio('budgetFeedback'),
+      budgetNote:      getVal('budgetNote'),
+    },
+    other: {
+      concerns:        getVal('concerns'),
+      differentiation: getVal('differentiation'),
+    },
+  };
+
+  try {
+    await db.collection('hearings').add(data);
+    // Show thank you
+    document.getElementById('hearingForm').style.display = 'none';
+    document.getElementById('thank-you').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (err) {
+    console.error('Firestore error:', err);
+    alert('送信中にエラーが発生しました。\n' + err.message);
+    btn.disabled = false;
+    btn.textContent = '📤 回答を送信する';
+  }
+});
+
+// ================================================================
+// ADMIN: LOAD SUBMISSIONS (REAL-TIME)
+// ================================================================
+function loadSubmissions() {
+  const listEl   = document.getElementById('submissions-list');
+  const emptyEl  = document.getElementById('admin-empty');
+  const loadEl   = document.getElementById('admin-loading');
+
+  db.collection('hearings')
+    .orderBy('submittedAt', 'desc')
+    .onSnapshot(snapshot => {
+      loadEl.style.display  = 'none';
+      listEl.innerHTML      = '';
+
+      if (snapshot.empty) {
+        emptyEl.style.display = 'block';
+        updateStats([], null);
+        return;
+      }
+
+      emptyEl.style.display = 'none';
+      const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      updateStats(docs, docs[0]);
+      docs.forEach(doc => listEl.appendChild(buildCard(doc)));
+    }, err => {
+      loadEl.textContent = '❌ データ取得エラー: ' + err.message;
+    });
+}
+
+function updateStats(docs, latest) {
+  document.getElementById('statTotal').textContent = docs.length;
+
+  if (latest && latest.submittedAt) {
+    const d = latest.submittedAt.toDate();
+    document.getElementById('statLatest').textContent =
+      d.toLocaleDateString('ja-JP') + ' ' + d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // Most common issue
+  const issueCount = {};
+  docs.forEach(doc => {
+    (doc.currentIssues?.problems || []).forEach(p => {
+      issueCount[p] = (issueCount[p] || 0) + 1;
+    });
+  });
+  const top = Object.entries(issueCount).sort((a, b) => b[1] - a[1])[0];
+  if (top) {
+    document.getElementById('statTopIssue').textContent = top[0].replace(/（.+?）/g, '');
+  }
+}
+
+function buildCard(doc) {
+  const card = document.createElement('div');
+  card.className = 'sub-card';
+
+  const info    = doc.basicInfo   || {};
+  const issues  = doc.currentIssues || {};
+  const target  = doc.target      || {};
+  const design  = doc.design      || {};
+  const goals   = doc.goals       || {};
+  const seo     = doc.seo         || {};
+  const sched   = doc.schedule    || {};
+  const other   = doc.other       || {};
+  const feats   = doc.features    || {};
+
+  const initial = (info.name || '?').charAt(0).toUpperCase();
+  const timeStr = doc.submittedAt
+    ? doc.submittedAt.toDate().toLocaleString('ja-JP')
+    : '送信時刻不明';
+
+  const tagsHtml = (arr = []) =>
+    arr.length ? `<div class="tag-list">${arr.map(t => `<span class="sub-tag">${t}</span>`).join('')}</div>` : '<span class="sub-field-value empty">未選択</span>';
+
+  const val = (v, fallback = '—') => v?.trim() ? v : `<span class="sub-field-value empty">${fallback}</span>`;
+
+  // Feature matrix summary
+  const featRequired = Object.entries(feats).filter(([,v]) => v === '必須').map(([k]) => k);
+  const featNice     = Object.entries(feats).filter(([,v]) => v === 'あれば良い').map(([k]) => k);
+
+  card.innerHTML = `
+    <div class="sub-card-header" onclick="toggleCard(this)">
+      <div class="sub-card-left">
+        <div class="sub-avatar">${initial}</div>
+        <div>
+          <div class="sub-name">${info.name || '名前なし'}</div>
+          <div class="sub-dept">${info.dept || ''} ${info.email ? '— ' + info.email : ''}</div>
+        </div>
+      </div>
+      <div class="sub-card-meta">
+        <div class="sub-time">${timeStr}</div>
+        <div class="sub-expand-icon">▼</div>
+      </div>
+    </div>
+    <div class="sub-card-body">
+      <div class="sub-section-divider">👤 基本情報</div>
+      <div class="sub-grid">
+        <div class="sub-field"><div class="sub-field-label">氏名</div><div class="sub-field-value">${info.name || '—'}</div></div>
+        <div class="sub-field"><div class="sub-field-label">部署</div><div class="sub-field-value">${val(info.dept)}</div></div>
+        <div class="sub-field"><div class="sub-field-label">メール</div><div class="sub-field-value">${info.email || '—'}</div></div>
+        <div class="sub-field"><div class="sub-field-label">電話</div><div class="sub-field-value">${val(info.phone)}</div></div>
+      </div>
+
+      <div class="sub-section-divider">🔍 現行サイトの課題</div>
+      <div class="sub-field"><div class="sub-field-label">選択した課題</div>${tagsHtml(issues.problems)}</div>
+      <div class="sub-field" style="margin-top:0.5rem;"><div class="sub-field-label">詳細</div><div class="sub-field-value">${val(issues.otherDetail)}</div></div>
+
+      <div class="sub-section-divider">🎯 ターゲット・目標</div>
+      <div class="sub-grid">
+        <div class="sub-field"><div class="sub-field-label">重視ユーザー層</div><div class="sub-field-value">${target.priority || '—'}</div></div>
+        <div class="sub-field"><div class="sub-field-label">B2Bターゲット</div>${tagsHtml(target.b2bTargets)}</div>
+      </div>
+      <div class="sub-field"><div class="sub-field-label">リニューアル目標</div>${tagsHtml(goals.goals)}</div>
+      <div class="sub-field" style="margin-top:0.5rem;"><div class="sub-field-label">最重要目標</div><div class="sub-field-value">${val(goals.topGoal)}</div></div>
+
+      <div class="sub-section-divider">🎨 デザイン</div>
+      <div class="sub-grid">
+        <div class="sub-field"><div class="sub-field-label">イメージキーワード</div><div class="sub-field-value">${design.imageKeyword || '—'}</div></div>
+        <div class="sub-field"><div class="sub-field-label">ブランドカラー</div><div class="sub-field-value">${design.brandColor || '—'}</div></div>
+      </div>
+      <div class="sub-field"><div class="sub-field-label">参考サイト</div><div class="sub-field-value">${val(design.references)}</div></div>
+      <div class="sub-field"><div class="sub-field-label">NGデザイン</div><div class="sub-field-value">${val(design.ngDesign)}</div></div>
+
+      <div class="sub-section-divider">⚙️ 機能要件</div>
+      <div class="sub-field"><div class="sub-field-label">必須と回答した機能</div>${tagsHtml(featRequired)}</div>
+      <div class="sub-field" style="margin-top:0.5rem;"><div class="sub-field-label">あれば良いと回答した機能</div>${tagsHtml(featNice)}</div>
+
+      <div class="sub-section-divider">📈 SEO・集客</div>
+      <div class="sub-grid">
+        <div class="sub-field"><div class="sub-field-label">現在の施策</div>${tagsHtml(seo.measures)}</div>
+        <div class="sub-field"><div class="sub-field-label">広告サポート</div><div class="sub-field-value">${seo.adsSupport || '—'}</div></div>
+      </div>
+      <div class="sub-field"><div class="sub-field-label">狙いたいキーワード</div><div class="sub-field-value">${val(seo.keywords)}</div></div>
+
+      <div class="sub-section-divider">📅 スケジュール・予算</div>
+      <div class="sub-grid">
+        <div class="sub-field"><div class="sub-field-label">公開希望時期</div><div class="sub-field-value">${sched.launchTiming || '—'}</div></div>
+        <div class="sub-field"><div class="sub-field-label">予算への意見</div><div class="sub-field-value">${sched.budgetFeedback || '—'}</div></div>
+      </div>
+      <div class="sub-field"><div class="sub-field-label">予算メモ</div><div class="sub-field-value">${val(sched.budgetNote)}</div></div>
+
+      <div class="sub-section-divider">💬 その他</div>
+      <div class="sub-field"><div class="sub-field-label">懸念・質問</div><div class="sub-field-value">${val(other.concerns)}</div></div>
+      <div class="sub-field"><div class="sub-field-label">差別化ポイント</div><div class="sub-field-value">${val(other.differentiation)}</div></div>
+    </div>
+  `;
+  return card;
+}
+
+function toggleCard(header) {
+  header.closest('.sub-card').classList.toggle('expanded');
+}
+</script>
+
+</body>
+</html>
