@@ -509,6 +509,12 @@ input, textarea, select, button { font-family: inherit; }
     <div class="header-badge">📋 要件ヒアリング</div>
   </header>
 
+  <!-- Last Saved Bar -->
+  <div id="last-saved-bar" style="display:none;background:#f0fdf4;border-bottom:1px solid #bbf7d0;padding:0.55rem 5%;text-align:center;">
+    <span style="font-size:0.82rem;color:#166534;font-weight:700;">💾 最終保存: <span id="last-saved-time">—</span>　</span>
+    <span style="font-size:0.78rem;color:#16a34a;">再アクセス時もこの内容が表示されます</span>
+  </div>
+
   <!-- Progress Bar -->
   <div class="progress-wrap">
     <div class="progress-bar-track">
@@ -842,75 +848,18 @@ input, textarea, select, button { font-family: inherit; }
 </div><!-- /view-client -->
 
 
-<!-- ============================================================
-     ADMIN VIEW
-     ============================================================ -->
-<div id="view-admin" style="display:none;">
 
-  <header class="admin-header">
-    <div>
-      <div class="admin-header-title">📊 ヒアリング回答 管理画面</div>
-      <div class="admin-header-sub">FNJ コーポレートサイト リニューアル — テラ担当者専用</div>
-    </div>
-    <div class="admin-live-badge">
-      <div class="live-dot"></div>
-      LIVE
-    </div>
-  </header>
-
-  <div class="admin-wrap">
-
-    <!-- Stats -->
-    <div class="admin-stats" id="adminStats">
-      <div class="admin-stat-card">
-        <div class="admin-stat-icon">📋</div>
-        <div>
-          <div class="admin-stat-label">総回答数</div>
-          <div class="admin-stat-val" id="statTotal">—</div>
-        </div>
-      </div>
-      <div class="admin-stat-card">
-        <div class="admin-stat-icon">🕐</div>
-        <div>
-          <div class="admin-stat-label">最新回答</div>
-          <div class="admin-stat-val" id="statLatest" style="font-size:1rem;">—</div>
-        </div>
-      </div>
-      <div class="admin-stat-card">
-        <div class="admin-stat-icon">🎯</div>
-        <div>
-          <div class="admin-stat-label">最多課題</div>
-          <div class="admin-stat-val" id="statTopIssue" style="font-size:0.85rem;line-height:1.3;">—</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Submissions List -->
-    <div class="submissions-header">
-      <div class="submissions-title">回答一覧（新着順）</div>
-      <div class="submissions-sort">リアルタイム更新中</div>
-    </div>
-
-    <div id="admin-loading">⏳ Firestoreに接続中...</div>
-    <div id="admin-empty">
-      <div class="empty-icon">📭</div>
-      <p>まだ回答がありません。<br>クライアントがフォームを送信すると、ここにリアルタイムで表示されます。</p>
-    </div>
-    <div id="submissions-list"></div>
-
-  </div>
-</div><!-- /view-admin -->
+<!-- Save Toast -->
+<div id="save-toast" style="position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(12px);background:#0f2557;color:#fff;padding:0.75rem 1.75rem;border-radius:10px;font-size:0.9rem;font-weight:700;opacity:0;transition:opacity 0.3s,transform 0.3s;z-index:9999;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+  ✅ 回答を保存しました
+</div>
 
 <!-- ============================================================
      JAVASCRIPT
      ============================================================ -->
 <script>
 // ================================================================
-// ⚠️ Firebase設定
-// 1. https://console.firebase.google.com/ でプロジェクトを作成
-// 2. Firestoreを有効化（本番モードまたはテストモード）
-// 3. プロジェクト設定 → ウェブアプリ追加 → 設定値をコピー
-// 4. 下記 YOUR_XXX を実際の値に置き換えて保存・プッシュしてください
+// Firebase 設定
 // ================================================================
 const firebaseConfig = {
   apiKey:            "AIzaSyDtDu4r15kBnGpyA5IsdDzaZR2Ep46Fio0",
@@ -921,6 +870,8 @@ const firebaseConfig = {
   appId:             "1:777832673804:web:367656e54c7a9130fbf429",
 };
 // ================================================================
+
+const DOC_ID = "fnj-main";
 
 // ── Firebase init ──
 const IS_CONFIGURED = !firebaseConfig.apiKey.startsWith("YOUR_");
@@ -933,22 +884,11 @@ if (IS_CONFIGURED) {
   document.getElementById('config-warning').style.display = 'block';
 }
 
-// ── View routing ──
-const params = new URLSearchParams(window.location.search);
-const isAdmin = params.get('view') === 'admin';
-
-if (isAdmin) {
-  document.getElementById('view-admin').style.display = 'block';
-  if (IS_CONFIGURED) {
-    loadSubmissions();
-  } else {
-    document.getElementById('admin-loading').textContent = '⚠️ Firebase設定が未完了です。HTMLを設定後に再アクセスしてください。';
-  }
-} else {
-  document.getElementById('view-client').style.display = 'block';
-  buildFeatureMatrix();
-  initProgress();
-}
+// ── 常にクライアントビューを表示 ──
+document.getElementById('view-client').style.display = 'block';
+buildFeatureMatrix();
+initProgress();
+if (IS_CONFIGURED) loadSavedData();
 
 // ================================================================
 // FEATURE MATRIX (Section 6)
@@ -1076,7 +1016,7 @@ document.getElementById('hearingForm')?.addEventListener('submit', async functio
   });
 
   const data = {
-    submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    savedAt: firebase.firestore.FieldValue.serverTimestamp(),
     basicInfo: {
       name:  getVal('name'),
       dept:  getVal('dept'),
@@ -1120,170 +1060,132 @@ document.getElementById('hearingForm')?.addEventListener('submit', async functio
   };
 
   try {
-    await db.collection('hearings').add(data);
-    // Show thank you
-    document.getElementById('hearingForm').style.display = 'none';
-    document.getElementById('thank-you').style.display = 'block';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    await db.collection('hearings').doc(DOC_ID).set(data);
+    showLastSaved(new Date());
+    showSaveToast();
+    btn.disabled = false;
+    btn.textContent = '💾 回答を保存する';
   } catch (err) {
     console.error('Firestore error:', err);
-    alert('送信中にエラーが発生しました。\n' + err.message);
+    alert('保存中にエラーが発生しました。\n' + err.message);
     btn.disabled = false;
-    btn.textContent = '📤 回答を送信する';
+    btn.textContent = '💾 回答を保存する';
   }
 });
 
 // ================================================================
-// ADMIN: LOAD SUBMISSIONS (REAL-TIME)
+// LOAD SAVED DATA
 // ================================================================
-function loadSubmissions() {
-  const listEl   = document.getElementById('submissions-list');
-  const emptyEl  = document.getElementById('admin-empty');
-  const loadEl   = document.getElementById('admin-loading');
-
-  db.collection('hearings')
-    .orderBy('submittedAt', 'desc')
-    .onSnapshot(snapshot => {
-      loadEl.style.display  = 'none';
-      listEl.innerHTML      = '';
-
-      if (snapshot.empty) {
-        emptyEl.style.display = 'block';
-        updateStats([], null);
-        return;
-      }
-
-      emptyEl.style.display = 'none';
-      const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
-      updateStats(docs, docs[0]);
-      docs.forEach(doc => listEl.appendChild(buildCard(doc)));
-    }, err => {
-      loadEl.textContent = '❌ データ取得エラー: ' + err.message;
-    });
+async function loadSavedData() {
+  try {
+    const doc = await db.collection('hearings').doc(DOC_ID).get();
+    if (doc.exists) {
+      populateForm(doc.data());
+      const savedAt = doc.data().savedAt;
+      if (savedAt) showLastSaved(savedAt.toDate());
+    }
+  } catch (err) {
+    console.warn('保存データ読み込みエラー:', err);
+  }
 }
 
-function updateStats(docs, latest) {
-  document.getElementById('statTotal').textContent = docs.length;
-
-  if (latest && latest.submittedAt) {
-    const d = latest.submittedAt.toDate();
-    document.getElementById('statLatest').textContent =
-      d.toLocaleDateString('ja-JP') + ' ' + d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-  }
-
-  // Most common issue
-  const issueCount = {};
-  docs.forEach(doc => {
-    (doc.currentIssues?.problems || []).forEach(p => {
-      issueCount[p] = (issueCount[p] || 0) + 1;
+function populateForm(data) {
+  const setVal = (id, v) => {
+    const el = document.getElementById(id);
+    if (el && v !== undefined) el.value = v;
+  };
+  const setRadio = (name, v) => {
+    if (!v) return;
+    const el = document.querySelector(`input[name="${name}"][value="${CSS.escape(v)}"]`);
+    if (el) { el.checked = true; el.closest('.radio-item')?.classList.add('checked'); }
+  };
+  const setChecks = (name, arr) => {
+    if (!Array.isArray(arr)) return;
+    arr.forEach(v => {
+      const el = document.querySelector(`input[name="${name}"][value="${CSS.escape(v)}"]`);
+      if (el) { el.checked = true; el.closest('.check-item')?.classList.add('checked'); }
     });
+  };
+
+  const b = data.basicInfo       || {};
+  const i = data.currentIssues   || {};
+  const t = data.target          || {};
+  const g = data.goals           || {};
+  const d = data.design          || {};
+  const s = data.seo             || {};
+  const sc = data.schedule       || {};
+  const o = data.other           || {};
+  const f = data.features        || {};
+
+  // Section 1 基本情報
+  setVal('name',  b.name);
+  setVal('dept',  b.dept);
+  setVal('email', b.email);
+  setVal('phone', b.phone);
+
+  // Section 2 現行サイトの課題
+  setChecks('problems', i.problems);
+  setVal('problemsOther', i.otherDetail);
+
+  // Section 3 ターゲット
+  setRadio('targetPriority', t.priority);
+  setChecks('b2bTargets', t.b2bTargets);
+  setVal('targetDetail', t.detail);
+
+  // Section 4 目標
+  setChecks('goals', g.goals);
+  setVal('topGoal', g.topGoal);
+
+  // Section 5 デザイン
+  setRadio('designImage', d.imageKeyword);
+  setRadio('brandColor',  d.brandColor);
+  setVal('referenceUrls', d.references);
+  setVal('ngDesign',      d.ngDesign);
+
+  // Section 6 機能要件（feature matrix）
+  FEATURES.forEach((feat, idx) => {
+    const v = f[feat];
+    if (v) setRadio('feat_' + idx, v);
   });
-  const top = Object.entries(issueCount).sort((a, b) => b[1] - a[1])[0];
-  if (top) {
-    document.getElementById('statTopIssue').textContent = top[0].replace(/（.+?）/g, '');
-  }
+
+  // Section 7 SEO
+  setChecks('seoMeasures', s.measures);
+  setVal('keywords', s.keywords);
+  setRadio('adsSupport', s.adsSupport);
+
+  // Section 8 スケジュール・予算
+  setRadio('launchTiming',   sc.launchTiming);
+  setRadio('budgetFeedback', sc.budgetFeedback);
+  setVal('budgetNote', sc.budgetNote);
+
+  // Section 9 その他
+  setVal('concerns',        o.concerns);
+  setVal('differentiation', o.differentiation);
 }
 
-function buildCard(doc) {
-  const card = document.createElement('div');
-  card.className = 'sub-card';
-
-  const info    = doc.basicInfo   || {};
-  const issues  = doc.currentIssues || {};
-  const target  = doc.target      || {};
-  const design  = doc.design      || {};
-  const goals   = doc.goals       || {};
-  const seo     = doc.seo         || {};
-  const sched   = doc.schedule    || {};
-  const other   = doc.other       || {};
-  const feats   = doc.features    || {};
-
-  const initial = (info.name || '?').charAt(0).toUpperCase();
-  const timeStr = doc.submittedAt
-    ? doc.submittedAt.toDate().toLocaleString('ja-JP')
-    : '送信時刻不明';
-
-  const tagsHtml = (arr = []) =>
-    arr.length ? `<div class="tag-list">${arr.map(t => `<span class="sub-tag">${t}</span>`).join('')}</div>` : '<span class="sub-field-value empty">未選択</span>';
-
-  const val = (v, fallback = '—') => v?.trim() ? v : `<span class="sub-field-value empty">${fallback}</span>`;
-
-  // Feature matrix summary
-  const featRequired = Object.entries(feats).filter(([,v]) => v === '必須').map(([k]) => k);
-  const featNice     = Object.entries(feats).filter(([,v]) => v === 'あれば良い').map(([k]) => k);
-
-  card.innerHTML = `
-    <div class="sub-card-header" onclick="toggleCard(this)">
-      <div class="sub-card-left">
-        <div class="sub-avatar">${initial}</div>
-        <div>
-          <div class="sub-name">${info.name || '名前なし'}</div>
-          <div class="sub-dept">${info.dept || ''} ${info.email ? '— ' + info.email : ''}</div>
-        </div>
-      </div>
-      <div class="sub-card-meta">
-        <div class="sub-time">${timeStr}</div>
-        <div class="sub-expand-icon">▼</div>
-      </div>
-    </div>
-    <div class="sub-card-body">
-      <div class="sub-section-divider">👤 基本情報</div>
-      <div class="sub-grid">
-        <div class="sub-field"><div class="sub-field-label">氏名</div><div class="sub-field-value">${info.name || '—'}</div></div>
-        <div class="sub-field"><div class="sub-field-label">部署</div><div class="sub-field-value">${val(info.dept)}</div></div>
-        <div class="sub-field"><div class="sub-field-label">メール</div><div class="sub-field-value">${info.email || '—'}</div></div>
-        <div class="sub-field"><div class="sub-field-label">電話</div><div class="sub-field-value">${val(info.phone)}</div></div>
-      </div>
-
-      <div class="sub-section-divider">🔍 現行サイトの課題</div>
-      <div class="sub-field"><div class="sub-field-label">選択した課題</div>${tagsHtml(issues.problems)}</div>
-      <div class="sub-field" style="margin-top:0.5rem;"><div class="sub-field-label">詳細</div><div class="sub-field-value">${val(issues.otherDetail)}</div></div>
-
-      <div class="sub-section-divider">🎯 ターゲット・目標</div>
-      <div class="sub-grid">
-        <div class="sub-field"><div class="sub-field-label">重視ユーザー層</div><div class="sub-field-value">${target.priority || '—'}</div></div>
-        <div class="sub-field"><div class="sub-field-label">B2Bターゲット</div>${tagsHtml(target.b2bTargets)}</div>
-      </div>
-      <div class="sub-field"><div class="sub-field-label">リニューアル目標</div>${tagsHtml(goals.goals)}</div>
-      <div class="sub-field" style="margin-top:0.5rem;"><div class="sub-field-label">最重要目標</div><div class="sub-field-value">${val(goals.topGoal)}</div></div>
-
-      <div class="sub-section-divider">🎨 デザイン</div>
-      <div class="sub-grid">
-        <div class="sub-field"><div class="sub-field-label">イメージキーワード</div><div class="sub-field-value">${design.imageKeyword || '—'}</div></div>
-        <div class="sub-field"><div class="sub-field-label">ブランドカラー</div><div class="sub-field-value">${design.brandColor || '—'}</div></div>
-      </div>
-      <div class="sub-field"><div class="sub-field-label">参考サイト</div><div class="sub-field-value">${val(design.references)}</div></div>
-      <div class="sub-field"><div class="sub-field-label">NGデザイン</div><div class="sub-field-value">${val(design.ngDesign)}</div></div>
-
-      <div class="sub-section-divider">⚙️ 機能要件</div>
-      <div class="sub-field"><div class="sub-field-label">必須と回答した機能</div>${tagsHtml(featRequired)}</div>
-      <div class="sub-field" style="margin-top:0.5rem;"><div class="sub-field-label">あれば良いと回答した機能</div>${tagsHtml(featNice)}</div>
-
-      <div class="sub-section-divider">📈 SEO・集客</div>
-      <div class="sub-grid">
-        <div class="sub-field"><div class="sub-field-label">現在の施策</div>${tagsHtml(seo.measures)}</div>
-        <div class="sub-field"><div class="sub-field-label">広告サポート</div><div class="sub-field-value">${seo.adsSupport || '—'}</div></div>
-      </div>
-      <div class="sub-field"><div class="sub-field-label">狙いたいキーワード</div><div class="sub-field-value">${val(seo.keywords)}</div></div>
-
-      <div class="sub-section-divider">📅 スケジュール・予算</div>
-      <div class="sub-grid">
-        <div class="sub-field"><div class="sub-field-label">公開希望時期</div><div class="sub-field-value">${sched.launchTiming || '—'}</div></div>
-        <div class="sub-field"><div class="sub-field-label">予算への意見</div><div class="sub-field-value">${sched.budgetFeedback || '—'}</div></div>
-      </div>
-      <div class="sub-field"><div class="sub-field-label">予算メモ</div><div class="sub-field-value">${val(sched.budgetNote)}</div></div>
-
-      <div class="sub-section-divider">💬 その他</div>
-      <div class="sub-field"><div class="sub-field-label">懸念・質問</div><div class="sub-field-value">${val(other.concerns)}</div></div>
-      <div class="sub-field"><div class="sub-field-label">差別化ポイント</div><div class="sub-field-value">${val(other.differentiation)}</div></div>
-    </div>
-  `;
-  return card;
+// ================================================================
+// UI HELPERS
+// ================================================================
+function showLastSaved(date) {
+  const bar  = document.getElementById('last-saved-bar');
+  const time = document.getElementById('last-saved-time');
+  if (!bar || !time) return;
+  const d = date instanceof Date ? date : new Date(date);
+  time.textContent =
+    d.toLocaleDateString('ja-JP') + ' ' +
+    d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+  bar.style.display = 'block';
 }
 
-function toggleCard(header) {
-  header.closest('.sub-card').classList.toggle('expanded');
+function showSaveToast() {
+  const toast = document.getElementById('save-toast');
+  if (!toast) return;
+  toast.style.opacity = '1';
+  toast.style.transform = 'translateX(-50%) translateY(0)';
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-50%) translateY(12px)';
+  }, 3000);
 }
 </script>
 
