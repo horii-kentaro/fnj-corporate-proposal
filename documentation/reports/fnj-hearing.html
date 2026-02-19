@@ -884,12 +884,6 @@ if (IS_CONFIGURED) {
   document.getElementById('config-warning').style.display = 'block';
 }
 
-// ── 常にクライアントビューを表示 ──
-document.getElementById('view-client').style.display = 'block';
-buildFeatureMatrix();
-initProgress();
-if (IS_CONFIGURED) loadSavedData();
-
 // ================================================================
 // FEATURE MATRIX (Section 6)
 // ================================================================
@@ -921,6 +915,12 @@ function buildFeatureMatrix() {
     tbody.appendChild(tr);
   });
 }
+
+// ── 常にクライアントビューを表示（FEATURES宣言後に実行）──
+document.getElementById('view-client').style.display = 'block';
+buildFeatureMatrix();
+initProgress();
+if (IS_CONFIGURED) loadSavedData();
 
 // ================================================================
 // PROGRESS BAR
