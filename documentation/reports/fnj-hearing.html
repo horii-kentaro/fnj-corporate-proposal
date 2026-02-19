@@ -820,9 +820,9 @@ input, textarea, select, button { font-family: inherit; }
       <!-- Submit -->
       <div class="submit-area">
         <button type="submit" class="submit-btn" id="submitBtn">
-          📤 回答を送信する
+          💾 回答を保存する
         </button>
-        <p class="submit-note">送信後、担当者より改めてご連絡いたします。</p>
+        <p class="submit-note">保存後、担当者より改めてご連絡いたします。</p>
       </div>
 
     </form>
@@ -1060,7 +1060,7 @@ document.getElementById('hearingForm')?.addEventListener('submit', async functio
 
   const btn = document.getElementById('submitBtn');
   btn.disabled = true;
-  btn.textContent = '⏳ 送信中...';
+  btn.textContent = '⏳ 保存中...';
 
   // Collect form data
   const getChecked = (name) => {
